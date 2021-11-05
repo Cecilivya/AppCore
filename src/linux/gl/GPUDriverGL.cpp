@@ -187,7 +187,7 @@ void GPUDriverGL::SetRenderBufferBitmapDirty(uint32_t render_buffer_id,
 #endif
 
 void GPUDriverGL::CreateTexture(uint32_t texture_id,
-  Ref<Bitmap> bitmap) {
+  RefPtr<Bitmap> bitmap) {
   if (bitmap->IsEmpty()) {
     CreateFBOTexture(texture_id, bitmap);
     return;
@@ -209,18 +209,18 @@ void GPUDriverGL::CreateTexture(uint32_t texture_id,
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
   glPixelStorei(GL_UNPACK_ROW_LENGTH, bitmap->row_bytes() / bitmap->bpp());
   CHECK_GL();
-  if (bitmap->format() == kBitmapFormat_A8_UNORM) {
+  if (bitmap->format() == BitmapFormat::A8_UNORM) {
     const void* pixels = bitmap->LockPixels();
     glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, bitmap->width(), bitmap->height(), 0,
       GL_RED, GL_UNSIGNED_BYTE, pixels);
     bitmap->UnlockPixels();
-  } else if (bitmap->format() == kBitmapFormat_BGRA8_UNORM_SRGB) {
+  } else if (bitmap->format() == BitmapFormat::BGRA8_UNORM_SRGB) {
     const void* pixels = bitmap->LockPixels();
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, bitmap->width(), bitmap->height(), 0,
       GL_BGRA, GL_UNSIGNED_BYTE, pixels);
     bitmap->UnlockPixels();
   } else {
-    FATAL("Unhandled texture format: " << bitmap->format())
+    FATAL("Unhandled texture format: " << (int)bitmap->format())
   }
 
   CHECK_GL();
@@ -229,7 +229,7 @@ void GPUDriverGL::CreateTexture(uint32_t texture_id,
 }
 
 void GPUDriverGL::UpdateTexture(uint32_t texture_id,
-  Ref<Bitmap> bitmap) {
+  RefPtr<Bitmap> bitmap) {
   glActiveTexture(GL_TEXTURE0 + 0);
   TextureEntry& entry = texture_map[texture_id];
   glBindTexture(GL_TEXTURE_2D, entry.tex_id);
@@ -238,18 +238,18 @@ void GPUDriverGL::UpdateTexture(uint32_t texture_id,
   glPixelStorei(GL_UNPACK_ROW_LENGTH, bitmap->row_bytes() / bitmap->bpp());
 
   if (!bitmap->IsEmpty()) {
-    if (bitmap->format() == kBitmapFormat_A8_UNORM) {
+    if (bitmap->format() == BitmapFormat::A8_UNORM) {
       const void* pixels = bitmap->LockPixels();
       glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, bitmap->width(), bitmap->height(), 0,
         GL_RED, GL_UNSIGNED_BYTE, pixels);
       bitmap->UnlockPixels();
-    } else if (bitmap->format() == kBitmapFormat_BGRA8_UNORM_SRGB) {
+    } else if (bitmap->format() == BitmapFormat::BGRA8_UNORM_SRGB) {
       const void* pixels = bitmap->LockPixels();
       glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, bitmap->width(), bitmap->height(), 0,
         GL_BGRA, GL_UNSIGNED_BYTE, pixels);
       bitmap->UnlockPixels();
     } else {
-      FATAL("Unhandled texture format: " << bitmap->format());
+      FATAL("Unhandled texture format: " << (int)bitmap->format());
     }
 
     CHECK_GL();
@@ -507,10 +507,10 @@ void GPUDriverGL::DrawCommandList() {
 
   for (auto i = command_list_.begin(); i != command_list_.end(); ++i) {
     switch (i->command_type) {
-    case kCommandType_DrawGeometry:
+    case CommandType::DrawGeometry:
       DrawGeometry(i->geometry_id, i->indices_count, i->indices_offset, i->gpu_state);
       break;
-    case kCommandType_ClearRenderBuffer:
+    case CommandType::ClearRenderBuffer:
       ClearRenderBuffer(i->gpu_state.render_buffer_id);
       break;
     };
@@ -553,8 +553,8 @@ void GPUDriverGL::BindUltralightTexture(uint32_t ultralight_texture_id) {
 }
 
 void GPUDriverGL::LoadPrograms(void) {
-  LoadProgram(ultralight::kShaderType_Fill);
-  LoadProgram(ultralight::kShaderType_FillPath);
+  LoadProgram(ultralight::ShaderType::Fill);
+  LoadProgram(ultralight::ShaderType::FillPath);
 }
 
 void GPUDriverGL::DestroyPrograms(void) {
@@ -574,14 +574,14 @@ void GPUDriverGL::DestroyPrograms(void) {
 void GPUDriverGL::LoadProgram(ProgramType type) {
   GLenum ErrorCheckValue = glGetError();
   ProgramEntry prog;
-  if (type == kShaderType_Fill)
+  if (type == ShaderType::Fill)
   {
     prog.vert_shader_id = LoadShaderFromSource(GL_VERTEX_SHADER,
       shader_v2f_c4f_t2f_t2f_d28f_vert().c_str(), "shader_v2f_c4f_t2f_t2f_d28f.vert");
     prog.frag_shader_id = LoadShaderFromSource(GL_FRAGMENT_SHADER,
       shader_fill_frag().c_str(), "shader_fill.frag");
   }
-  else if (type == kShaderType_FillPath) {
+  else if (type == ShaderType::FillPath) {
     prog.vert_shader_id = LoadShaderFromSource(GL_VERTEX_SHADER,
       shader_v2f_c4f_t2f_vert().c_str(), "shader_v2f_c4f_t2f.vert");
     prog.frag_shader_id = LoadShaderFromSource(GL_FRAGMENT_SHADER,
@@ -596,7 +596,7 @@ void GPUDriverGL::LoadProgram(ProgramType type) {
   glBindAttribLocation(prog.program_id, 1, "in_Color");
   glBindAttribLocation(prog.program_id, 2, "in_TexCoord");
 
-  if (type == kShaderType_Fill) {
+  if (type == ShaderType::Fill) {
     glBindAttribLocation(prog.program_id, 3, "in_ObjCoord");
     glBindAttribLocation(prog.program_id, 4, "in_Data0");
     glBindAttribLocation(prog.program_id, 5, "in_Data1");
@@ -610,7 +610,7 @@ void GPUDriverGL::LoadProgram(ProgramType type) {
   glLinkProgram(prog.program_id);
   glUseProgram(prog.program_id);
 
-  if (type == kShaderType_Fill) {
+  if (type == ShaderType::Fill) {
     glUniform1i(glGetUniformLocation(prog.program_id, "Texture1"), 0);
     glUniform1i(glGetUniformLocation(prog.program_id, "Texture2"), 1);
     glUniform1i(glGetUniformLocation(prog.program_id, "Texture3"), 2);
@@ -628,7 +628,7 @@ void GPUDriverGL::SelectProgram(ProgramType type) {
     cur_program_id_ = i->second.program_id;
     glUseProgram(i->second.program_id);
   } else {
-    FATAL("Missing shader type: " << type);
+    FATAL("Missing shader type: " << (int)type);
   }
 }
 
@@ -644,7 +644,7 @@ void GPUDriverGL::UpdateUniforms(const GPUState& state) {
   CHECK_GL();
   SetUniform4fv("Scalar4", 2, &state.uniform_scalar[0]);
   CHECK_GL();
-  SetUniform4fv("Vector", 8, &state.uniform_vector[0].value[0]);
+  SetUniform4fv("Vector", 8, &state.uniform_vector[0].x);
   CHECK_GL();
   SetUniform1ui("ClipSize", state.clip_size);
   CHECK_GL();
@@ -693,7 +693,7 @@ Matrix GPUDriverGL::ApplyProjection(const Matrix4x4& transform, float screen_wid
   return result;
 }
 
-void GPUDriverGL::CreateFBOTexture(uint32_t texture_id, Ref<Bitmap> bitmap) {
+void GPUDriverGL::CreateFBOTexture(uint32_t texture_id, RefPtr<Bitmap> bitmap) {
   CHECK_GL();
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -820,7 +820,7 @@ void GPUDriverGL::CreateVAOIfNeededForActiveContext(uint32_t geometry_id) {
   glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, geometry_entry.vbo_indices);
   CHECK_GL();
 
-  if (geometry_entry.vertex_format == kVertexBufferFormat_2f_4ub_2f_2f_28f) {
+  if (geometry_entry.vertex_format == VertexBufferFormat::_2f_4ub_2f_2f_28f) {
     GLsizei stride = 140;
 
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, stride, (GLvoid*)0);
@@ -848,7 +848,7 @@ void GPUDriverGL::CreateVAOIfNeededForActiveContext(uint32_t geometry_id) {
     glEnableVertexAttribArray(10);
 
     CHECK_GL();
-  } else if (geometry_entry.vertex_format == kVertexBufferFormat_2f_4ub_2f) {
+  } else if (geometry_entry.vertex_format == VertexBufferFormat::_2f_4ub_2f) {
     GLsizei stride = 20;
 
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, stride, (GLvoid*)0);
@@ -861,7 +861,7 @@ void GPUDriverGL::CreateVAOIfNeededForActiveContext(uint32_t geometry_id) {
 
     CHECK_GL();
   } else {
-    FATAL("Unhandled vertex format: " << geometry_entry.vertex_format);
+    FATAL("Unhandled vertex format: " << (int)geometry_entry.vertex_format);
   }
 
   glBindVertexArray(0);

@@ -75,7 +75,7 @@ AppGLFW::AppGLFW(Settings settings, Config config) : settings_(settings) {
 
   main_monitor_.reset(new MonitorGLFW());
 
-  config.face_winding = kFaceWinding_Clockwise;
+  config.face_winding = FaceWinding::Clockwise;
   Platform::instance().set_config(config);
 
   if (!Platform::instance().file_system()) {
@@ -120,8 +120,8 @@ Monitor* AppGLFW::main_monitor() {
   return main_monitor_.get();
 }
 
-Ref<Renderer> AppGLFW::renderer() {
-  return *renderer_.get();
+RefPtr<Renderer> AppGLFW::renderer() {
+  return renderer_;
 }
 
 void AppGLFW::Run() {
@@ -205,8 +205,8 @@ void AppGLFW::Update() {
 
 static App* g_app_instance = nullptr;
 
-Ref<App> App::Create(Settings settings, Config config) {
-  g_app_instance = new AppGLFW(settings, config);
+RefPtr<App> App::Create(Settings settings, Config config) {
+  g_app_instance = (App*)new AppGLFW(settings, config);
   return AdoptRef(*g_app_instance);
 }
 
