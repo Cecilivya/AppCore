@@ -23,7 +23,7 @@ if "%2"=="x64_uwp" (
 GOTO SYNTAX
 :VALID
 
-set "DIRNAME=build_%1_%2"
+set "DIRNAME=buildDir"
 
 if "%1"=="vs" (
   set "FLAGS=-G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=RelWithDebInfo"
@@ -83,23 +83,16 @@ if %STATIC_BUILD%==1 (
   echo Building static library.
   echo Tests will be disabled, not supported in static build.
   set BUILD_TESTS=0
-  set "DIRNAME=%DIRNAME%_static"
-) else (
-  set "DIRNAME=%DIRNAME%_dll"
-)
+) 
 set "FLAGS=%FLAGS% -DSTATIC_BUILD=%STATIC_BUILD%"
 
 if %STATIC_CRT%==1 (
   echo Building with static CRT
-  set "DIRNAME=%DIRNAME%_MT"
-) else (
-  set "DIRNAME=%DIRNAME%_MD"
-)
+) 
 set "FLAGS=%FLAGS% -DSTATIC_CRT=%STATIC_CRT%"
 
 if %DEBUG_CRT%==1 (
   echo Building with debug CRT
-  set "DIRNAME=%DIRNAME%d"
 )
 set "FLAGS=%FLAGS% -DDEBUG_CRT=%DEBUG_CRT%"
 
